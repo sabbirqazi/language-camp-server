@@ -30,12 +30,33 @@ async function run() {
     // Send a ping to confirm a successful connection
     const classCollection = client.db("languageDB").collection("classes");
     const instructorCollection = client.db("languageDB").collection("instructors");
+    const userCollection = client.db("languageDB").collection("users");
 
 
+    // user related api
+    app.get('/users',  async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email }
+      const existingUser = await userCollection.findOne(query);
+
+      if (existingUser) {
+        return res.send({ message: 'user already exists' })
+      }
+
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });  
+ // class related api
     app.get('/classes', async (req, res) => {
       const result = await classCollection.find().toArray();
       res.send(result);
     }) 
+    //instructor api
     app.get('/instructors', async (req, res) => {
       const result = await instructorCollection.find().toArray();
       res.send(result);
