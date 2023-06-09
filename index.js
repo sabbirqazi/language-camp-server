@@ -11,7 +11,7 @@ app.use(express.json());
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.y4xsfw0.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -31,6 +31,7 @@ async function run() {
     const classCollection = client.db("languageDB").collection("classes");
     const instructorCollection = client.db("languageDB").collection("instructors");
     const userCollection = client.db("languageDB").collection("users");
+    const myClassCollection = client.db("languageDB").collection("myClass");
 
 
     // user related api
@@ -38,7 +39,36 @@ async function run() {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
+    app.post("/postmyclass", async (req, res) => {
+      const myClass = req.body;
 
+      const result = await myClassCollection.insertOne(myClass);
+      res.send(result);
+    });
+
+      //student selected class
+      app.get("/myclasses", async (req, res) => {
+        let query = {};
+        if (req.query?.email) {
+          query = { email: req.query.email };
+        }
+        const result = await myClassCollection.find(query).toArray();
+  
+        res.send(result);
+      });
+/*     app.patch('/users/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: 'admin'
+        },
+      };
+
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    }) */
     app.post('/users', async (req, res) => {
       const user = req.body;
       const query = { email: user.email }
