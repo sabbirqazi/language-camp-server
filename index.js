@@ -40,6 +40,17 @@ async function run() {
       const result = await classCollection.insertOne(newClass);
       res.send(result);
     });
+   //instructor specific data
+   app.get("/instructorclasses", async (req, res) => {
+    let query = {};
+    if (req.query?.email) {
+      query = { email: req.query.email };
+    }
+    const result = await classCollection.find(query).toArray();
+
+    res.send(result);
+  });
+
     // user related api
     app.get("/users", async (req, res) => {
       const result = await userCollection.find().toArray();
