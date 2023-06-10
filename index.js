@@ -34,6 +34,7 @@ async function run() {
     const myClassCollection = client.db("languageDB").collection("myClass");
     // TODO: remove instructor collection and fetch the instructor from class collection
     // instructor related api
+
     //post the instructor class
     app.post("/addclasses", async (req, res) => {
       const newClass = req.body;
@@ -73,6 +74,36 @@ async function run() {
 
       res.send(result);
     });
+    // admin related api
+    //approve  class
+    app.patch("/classes/manageclasses/approve/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "approved",
+        },
+      };
+      const result = await classCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+    //deny  class
+    app.patch("/classes/manageclasses/deny/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const feedbackText = req.body
+      const updateDoc = {
+        $set: {
+          status: "denied",
+          feedback: feedbackText.feedbackText,
+        },
+      };
+      const result = await classCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
      // checking is Admin for dashboard
      app.get("/users/admin/:email", async(req, res) => {
       const email = req.params.email;
