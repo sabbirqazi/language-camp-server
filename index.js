@@ -73,6 +73,16 @@ async function run() {
 
       res.send(result);
     });
+     // checking is Admin for dashboard
+     app.get("/users/admin/:email", async(req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const result = {admin: user?.role === 'admin'};
+      res.send(result);
+   
+
+    })
     app.patch("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
       console.log(id);
@@ -80,6 +90,29 @@ async function run() {
       const updateDoc = {
         $set: {
           role: "admin",
+        },
+      };
+
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+  // checking is instructor for dashboard
+    app.get("/users/instructor/:email", async(req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const result = {instructor: user?.role === 'instructor'};
+      res.send(result);
+     
+
+    })
+    app.patch("/users/instructor/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: "instructor",
         },
       };
 
@@ -110,9 +143,9 @@ async function run() {
       const result = await classCollection.find().toArray();
       res.send(result);
     });
-    //instructor api
-    app.get("/instructors", async (req, res) => {
-      const result = await instructorCollection.find().toArray();
+    //instructors page api
+    app.get("/users/instructor", async (req, res) => {
+      const result = await userCollection.find({ role: "instructor" }).toArray();
       res.send(result);
     });
     await client.db("admin").command({ ping: 1 });
