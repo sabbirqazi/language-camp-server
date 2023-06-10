@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY)
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -10,8 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.y4xsfw0.mongodb.net/?retryWrites=true&w=majority`;
-
+const uri = `mongodb://${process.env.DB_USER}:${process.env.DB_PASS}@ac-fbs5ud0-shard-00-00.y4xsfw0.mongodb.net:27017,ac-fbs5ud0-shard-00-01.y4xsfw0.mongodb.net:27017,ac-fbs5ud0-shard-00-02.y4xsfw0.mongodb.net:27017/?ssl=true&replicaSet=atlas-hb80nr-shard-0&authSource=admin&retryWrites=true&w=majority`;
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
@@ -74,6 +73,19 @@ async function run() {
 
       res.send(result);
     });
+    //getting the price for payment api
+    app.get("/myclasses/:id", async (req, res) => {
+      const id = req.params.id;
+      // Validate the id parameter
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).send("Invalid ID format");
+      }
+      const query = { _id: new ObjectId(id) };
+      const result = await myClassCollection.findOne(query);
+      console.log(result);
+      res.send(result);
+    });
+
     // admin related api
     //approve  class
     app.patch("/classes/manageclasses/approve/:id", async (req, res) => {
@@ -88,12 +100,12 @@ async function run() {
       const result = await classCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-    //deny  class
+    //deny  class and send feedback
     app.patch("/classes/manageclasses/deny/:id", async (req, res) => {
       const id = req.params.id;
       console.log(id);
       const filter = { _id: new ObjectId(id) };
-      const feedbackText = req.body
+      const feedbackText = req.body;
       const updateDoc = {
         $set: {
           status: "denied",
@@ -179,6 +191,21 @@ async function run() {
       const result = await userCollection.find({ role: "instructor" }).toArray();
       res.send(result);
     });
+
+    //payment related api 
+    app.post('/create-payment-intent',  async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'aud',
+        payment_method_types: ['card']
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    })
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
