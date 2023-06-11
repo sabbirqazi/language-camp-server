@@ -208,12 +208,23 @@ async function run() {
     //payment api
     app.post("/payments", async (req, res) => {
       const payment = req.body;
+      console.log(payment.courseId);
       const insertResult = await paymentCollection.insertOne(payment);    
       const query = { _id: new ObjectId(payment.courseId) };
+      console.log(query);
       const deleteResult = await myClassCollection.deleteOne(query);
       res.send({ insertResult, deleteResult });
     });
-
+    //payment history api
+    app.get("/payments/history", async (req, res) =>{
+      const result = await paymentCollection.find().sort({ _id: -1 }).toArray();
+      res.send(result);
+    })
+    //enrolled class api
+    app.get("/payments/enrolledclass", async (req, res) =>{
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    })
 /*     app.post('/payments', async (req, res) => {
       const payment = req.body;
       console.log();
