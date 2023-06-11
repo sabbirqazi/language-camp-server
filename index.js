@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY)
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -31,6 +31,7 @@ async function run() {
       .collection("instructors");
     const userCollection = client.db("languageDB").collection("users");
     const myClassCollection = client.db("languageDB").collection("myClass");
+    const paymentCollection = client.db("languageDB").collection("payments");
     // TODO: remove instructor collection and fetch the instructor from class collection
     // instructor related api
 
@@ -40,16 +41,16 @@ async function run() {
       const result = await classCollection.insertOne(newClass);
       res.send(result);
     });
-   //instructor specific data
-   app.get("/instructorclasses", async (req, res) => {
-    let query = {};
-    if (req.query?.email) {
-      query = { email: req.query.email };
-    }
-    const result = await classCollection.find(query).toArray();
+    //instructor specific data
+    app.get("/instructorclasses", async (req, res) => {
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query.email };
+      }
+      const result = await classCollection.find(query).toArray();
 
-    res.send(result);
-  });
+      res.send(result);
+    });
 
     // user related api
     app.get("/users", async (req, res) => {
@@ -77,9 +78,9 @@ async function run() {
     app.get("/myclasses/:id", async (req, res) => {
       const id = req.params.id;
       // Validate the id parameter
-      if (!ObjectId.isValid(id)) {
+      /*     if (!ObjectId.isValid(id)) {
         return res.status(400).send("Invalid ID format");
-      }
+      } */
       const query = { _id: new ObjectId(id) };
       const result = await myClassCollection.findOne(query);
       console.log(result);
@@ -116,16 +117,14 @@ async function run() {
       res.send(result);
     });
 
-     // checking is Admin for dashboard
-     app.get("/users/admin/:email", async(req, res) => {
+    // checking is Admin for dashboard
+    app.get("/users/admin/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const user = await userCollection.findOne(query);
-      const result = {admin: user?.role === 'admin'};
+      const result = { admin: user?.role === "admin" };
       res.send(result);
-   
-
-    })
+    });
     app.patch("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
       console.log(id);
@@ -139,16 +138,14 @@ async function run() {
       const result = await userCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-  // checking is instructor for dashboard
-    app.get("/users/instructor/:email", async(req, res) => {
+    // checking is instructor for dashboard
+    app.get("/users/instructor/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const user = await userCollection.findOne(query);
-      const result = {instructor: user?.role === 'instructor'};
+      const result = { instructor: user?.role === "instructor" };
       res.send(result);
-     
-
-    })
+    });
     app.patch("/users/instructor/:id", async (req, res) => {
       const id = req.params.id;
       console.log(id);
@@ -188,24 +185,45 @@ async function run() {
     });
     //instructors page api
     app.get("/users/instructor", async (req, res) => {
-      const result = await userCollection.find({ role: "instructor" }).toArray();
+      const result = await userCollection
+        .find({ role: "instructor" })
+        .toArray();
       res.send(result);
     });
 
-    //payment related api 
-    app.post('/create-payment-intent',  async (req, res) => {
+    //payment related api
+    app.post("/create-payment-intent", async (req, res) => {
       const { price } = req.body;
-      const amount = price * 100;
+
+      const amount = parseInt(price * 100);
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
-        currency: 'aud',
-        payment_method_types: ['card']
+        currency: "aud",
+        payment_method_types: ["card"],
       });
       res.send({
-        clientSecret: paymentIntent.client_secret
-      })
-    })
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+    //payment api
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);    
+      const query = { _id: new ObjectId(payment.courseId) };
+      const deleteResult = await myClassCollection.deleteOne(query);
+      res.send({ insertResult, deleteResult });
+    });
 
+/*     app.post('/payments', async (req, res) => {
+      const payment = req.body;
+      console.log();
+      const insertedId = await paymentsCollection.insertOne(payment);
+
+      const query = { _id: new ObjectId(payment.new_id) };
+      
+      const deleteResult = await selectedClassesCollection.deleteOne(query)
+      res.send({ insertedId, deleteResult, updateResult });
+  }) */
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
