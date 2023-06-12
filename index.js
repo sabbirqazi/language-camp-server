@@ -23,7 +23,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    /* await client.connect(); */
     // Send a ping to confirm a successful connection
     const classCollection = client.db("languageDB").collection("classes");
     const instructorCollection = client
@@ -35,8 +35,8 @@ async function run() {
     // TODO: remove instructor collection and fetch the instructor from class collection
     // instructor related api
 
-    //post the instructor class
-    app.post("/addclasses", async (req, res) => {
+    //post the instructors class
+    app.post("/addclass", async (req, res) => {
       const newClass = req.body;
       const result = await classCollection.insertOne(newClass);
       res.send(result);
@@ -59,10 +59,10 @@ async function run() {
     });
     app.post("/postmyclass", async (req, res) => {
       const myClass = req.body;
-
       const result = await myClassCollection.insertOne(myClass);
       res.send(result);
     });
+
 
     //student selected class
     app.get("/myclasses", async (req, res) => {
@@ -71,17 +71,16 @@ async function run() {
         query = { email: req.query.email };
       }
       const result = await myClassCollection.find(query).toArray();
-
       res.send(result);
     });
     //getting the price for payment api
-    app.get("/myclasses/:id", async (req, res) => {
-      const id = req.params.id;
+    app.get("/myclasses/:classId", async (req, res) => {
+      const classId = req.params.classId;
       // Validate the id parameter
       /*     if (!ObjectId.isValid(id)) {
         return res.status(400).send("Invalid ID format");
       } */
-      const query = { _id: new ObjectId(id) };
+      const query = { classId: classId };
       const result = await myClassCollection.findOne(query);
       console.log(result);
       res.send(result);
@@ -208,33 +207,43 @@ async function run() {
     //payment api
     app.post("/payments", async (req, res) => {
       const payment = req.body;
-      console.log(payment.courseId);
+      console.log(payment);
       const insertResult = await paymentCollection.insertOne(payment);    
-      const query = { _id: new ObjectId(payment.courseId) };
+      const query = { _id: new ObjectId(payment.classId) };
       console.log(query);
-      const deleteResult = await myClassCollection.deleteOne(query);
+      //class and my class different
+      const queryClass = { classId: payment.classId };
+      const deleteResult = await myClassCollection.deleteOne(queryClass)
+      ;
+     const classinfo = await classCollection.findOne(query);
+     const newSeat = parseFloat(classinfo?.availableSeats) - 1;
+     const newStudents = parseFloat(classinfo?.students) +1;
+     const updateSeat = {
+                   $set:{ availableSeats: newSeat, 
+                          students: newStudents
+                  }
+
+                   
+     }
+     const updateClassSeat = await classCollection.updateOne(query, updateSeat);
       res.send({ insertResult, deleteResult });
     });
     //payment history api
     app.get("/payments/history", async (req, res) =>{
-      const result = await paymentCollection.find().sort({ _id: -1 }).toArray();
+      const email = req.query.email;
+      const query = { email: email };
+    /*   const result = await myClassCollection.find(query).toArray();
+      res.send(result); */
+      const result = await paymentCollection.find(query).sort({ _id: -1 }).toArray();
       res.send(result);
     })
     //enrolled class api
     app.get("/payments/enrolledclass", async (req, res) =>{
-      const result = await paymentCollection.find().toArray();
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await paymentCollection.find(query).toArray();
       res.send(result);
     })
-/*     app.post('/payments', async (req, res) => {
-      const payment = req.body;
-      console.log();
-      const insertedId = await paymentsCollection.insertOne(payment);
-
-      const query = { _id: new ObjectId(payment.new_id) };
-      
-      const deleteResult = await selectedClassesCollection.deleteOne(query)
-      res.send({ insertedId, deleteResult, updateResult });
-  }) */
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
